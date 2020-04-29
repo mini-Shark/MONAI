@@ -242,9 +242,7 @@ class LoadNifti(Transform):
                     'affine data of all images should be same.'
 
         img_array = np.stack(img_array, axis=0) if len(img_array) > 1 else img_array[0]
-        if self.image_only:
-            return img_array
-        return img_array, compatible_meta
+        return img_array if self.image_only else (img_array, compatible_meta)
 
 
 class LoadPNG(Transform):
@@ -253,11 +251,13 @@ class LoadPNG(Transform):
     It's based on the Image module in PIL library.
     """
 
-    def __init__(self, dtype=np.float32):
+    def __init__(self, image_only=False, dtype=np.float32):
         """Args:
+            image_only (bool): if True return only the image volume, otherwise return image data array and metadata.
             dtype (np.dtype, optional): if not None convert the loaded image to this data type.
 
         """
+        self.image_only = image_only
         self.dtype = dtype
 
     def __call__(self, filename):
@@ -267,13 +267,27 @@ class LoadPNG(Transform):
         """
         filename = ensure_tuple(filename)
         img_array = list()
+        compatible_meta = None
         for name in filename:
             img = np.asarray(Image.open(name))
             if self.dtype:
                 img = img.astype(self.dtype)
             img_array.append(img)
+            meta = dict()
+            meta['filename_or_obj'] = name
+            meta['spatial_shape'] = img.shape[:2]
 
-        return np.stack(img_array, axis=0) if len(img_array) > 1 else img_array[0]
+            if self.image_only:
+                continue
+
+            if not compatible_meta:
+                compatible_meta = meta
+            else:
+                assert np.allclose(meta['spatial_shape'], compatible_meta['spatial_shape']), \
+                    'all the images in the list should have same spatial shape.'
+
+        img_array = np.stack(img_array, axis=0) if len(img_array) > 1 else img_array[0]
+        return img_array if self.image_only else (img_array, compatible_meta)
 
 
 class AsChannelFirst(Transform):
