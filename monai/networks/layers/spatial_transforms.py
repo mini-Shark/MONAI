@@ -96,7 +96,9 @@ class AffineTransform(nn.Module):
                 where N is the batch dim, C is the number of channels.
         """
         if not torch.is_tensor(src):
-            src = torch.tensor(src)
+            # https://github.com/pytorch/pytorch/issues/33812
+            # src = torch.tensor(src)
+            src = torch.as_tensor(src)
         src = src.float()  # always use float for compatibility
         sr = src.ndim - 2  # input spatial rank
         if sr not in (2, 3):
