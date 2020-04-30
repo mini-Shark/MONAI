@@ -248,7 +248,8 @@ class LoadNifti(Transform):
 class LoadPNG(Transform):
     """
     Load common 2D image format (PNG, JPG, etc. using PIL) file or files from provided path.
-    It's based on the Image module in PIL library.
+    It's based on the Image module in PIL library:
+    https://pillow.readthedocs.io/en/stable/reference/Image.html
     """
 
     def __init__(self, image_only=False, dtype=np.float32):
@@ -269,13 +270,20 @@ class LoadPNG(Transform):
         img_array = list()
         compatible_meta = None
         for name in filename:
-            img = np.asarray(Image.open(name))
+            img = Image.open(name)
+            data = np.asarray(img)
             if self.dtype:
-                img = img.astype(self.dtype)
-            img_array.append(img)
+                data = data.astype(self.dtype)
+            img_array.append(data)
             meta = dict()
             meta['filename_or_obj'] = name
-            meta['spatial_shape'] = img.shape[:2]
+            meta['spatial_shape'] = data.shape[:2]
+            meta['format'] = img.format
+            meta['mode'] = img.mode
+            meta['width'] = img.width
+            meta['height'] = img.height
+            meta['palette'] = img.palette
+            meta['info'] = img.info
 
             if self.image_only:
                 continue
